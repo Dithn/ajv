@@ -2,7 +2,7 @@ import type Ajv from ".."
 import type {KeywordCxt, SchemaObject} from ".."
 import _Ajv from "./ajv"
 import {_} from "../dist/compile/codegen/code"
-import assert = require("assert")
+import * as assert from "assert"
 import chai from "./chai"
 const should = chai.should()
 
@@ -225,7 +225,7 @@ describe("Ajv", () => {
         ajv.addSchema({$id: 1, type: "integer"})
         throw new Error("should have throw exception")
       } catch (e) {
-        e.message.should.equal("schema $id must be string")
+        ;(e as Error).message.should.equal("schema $id must be string")
       }
     })
 

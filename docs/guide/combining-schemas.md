@@ -41,7 +41,7 @@ const ajv = new Ajv()
 const validate = ajv.addSchema(defsSchema).compile(schema)
 ```
 
-See [Options](./api.md#options) and [addSchema](./api.md#add-schema) method.
+See [Options](../options.md) and [addSchema](../api.md#add-schema) method.
 
 ::: tip Reference resolution
 - `$ref` is resolved as the uri-reference using schema \$id as the base URI (see the example).
@@ -112,7 +112,7 @@ const ajv = new Ajv2019({
 const validate = ajv.getSchema("https://example.com/strict-tree")
 ```
 
-See [dynamic-refs](../spec/dynamic-ref.spec.ts) test for the example using `$dynamicAnchor`/`$dynamicRef`.
+See [dynamic-refs](https://github.com/ajv-validator/ajv/blob/master/spec/dynamic-ref.spec.ts) test for the example using `$dynamicAnchor`/`$dynamicRef`.
 
 At the moment Ajv implements the spec for dynamic recursive references with these limitations:
 

@@ -81,6 +81,227 @@ describe("discriminator keyword", function () {
     })
   })
 
+  describe("validation with referenced schemas", () => {
+    const definitions1 = {
+      schema1: {
+        properties: {
+          foo: {const: "x"},
+          a: {type: "string"},
+        },
+        required: ["foo", "a"],
+      },
+      schema2: {
+        properties: {
+          foo: {enum: ["y", "z"]},
+          b: {type: "string"},
+        },
+        required: ["foo", "b"],
+      },
+    }
+    const mainSchema1 = {
+      type: "object",
+      discriminator: {propertyName: "foo"},
+      oneOf: [
+        {
+          $ref: "#/definitions/schema1",
+        },
+        {
+          $ref: "#/definitions/schema2",
+        },
+      ],
+    }
+
+    const definitions2 = {
+      schema1: {
+        properties: {
+          foo: {const: "x"},
+          a: {type: "string"},
+        },
+        required: ["a"],
+      },
+      schema2: {
+        properties: {
+          foo: {enum: ["y", "z"]},
+          b: {type: "string"},
+        },
+        required: ["b"],
+      },
+    }
+    const mainSchema2 = {
+      type: "object",
+      discriminator: {propertyName: "foo"},
+      required: ["foo"],
+      oneOf: [
+        {
+          $ref: "#/definitions/schema1",
+        },
+        {
+          $ref: "#/definitions/schema2",
+        },
+      ],
+    }
+
+    const schema = [
+      {definitions: definitions1, ...mainSchema1},
+      {definitions: definitions2, ...mainSchema2},
+    ]
+
+    it("should validate data", () => {
+      assertValid(schema, {foo: "x", a: "a"})
+      assertValid(schema, {foo: "y", b: "b"})
+      assertValid(schema, {foo: "z", b: "b"})
+      assertInvalid(schema, {})
+      assertInvalid(schema, {foo: 1})
+      assertInvalid(schema, {foo: "bar"})
+      assertInvalid(schema, {foo: "x", b: "b"})
+      assertInvalid(schema, {foo: "y", a: "a"})
+      assertInvalid(schema, {foo: "z", a: "a"})
+    })
+  })
+
+  describe("schema with external $refs", () => {
+    const schemas = {
+      main: {
+        type: "object",
+        discriminator: {propertyName: "foo"},
+        required: ["foo"],
+        oneOf: [
+          {
+            $ref: "schema1",
+          },
+          {
+            $ref: "schema2",
+          },
+        ],
+      },
+      schema1: {
+        type: "object",
+        properties: {
+          foo: {const: "x"},
+        },
+      },
+      schema2: {
+        type: "object",
+        properties: {
+          foo: {enum: ["y", "z"]},
+        },
+      },
+    }
+
+    const data = {foo: "x"}
+    const badData = {foo: "w"}
+
+    it("compile should resolve each $ref to a schema that was added with addSchema", () => {
+      const opts = {
+        discriminator: true,
+      }
+      const ajv = new _Ajv(opts)
+      ajv.addSchema(schemas.main, "https://host/main")
+      ajv.addSchema(schemas.schema1, "https://host/schema1")
+      ajv.addSchema(schemas.schema2, "https://host/schema2")
+
+      const validate = ajv.compile({$ref: "https://host/main"})
+      assert.strictEqual(validate(data), true)
+      assert.strictEqual(validate(badData), false)
+    })
+    it("compileAsync should loadSchema each $ref", async () => {
+      const opts = {
+        discriminator: true,
+        loadSchema(url) {
+          if (!url.startsWith("https://host/")) return undefined
+          const name = url.substring("https://host/".length)
+          return schemas[name]
+        },
+      }
+      const ajv = new _Ajv(opts)
+      const validate = await ajv.compileAsync({$ref: "https://host/main"})
+      assert.strictEqual(validate(data), true)
+      assert.strictEqual(validate(badData), false)
+    })
+  })
+
+  describe("validation with deeply referenced schemas", () => {
+    const schema = [
+      {
+        type: "object",
+        properties: {
+          container: {
+            $ref: "#/definitions/Container",
+          },
+        },
+        definitions: {
+          BlockA: {
+            type: "object",
+            properties: {
+              _type: {
+                type: "string",
+                enum: ["a"],
+              },
+              a: {type: "string"},
+            },
+            additionalProperties: false,
+            required: ["_type"],
+            title: "BlockA",
+          },
+          BlockB: {
+            type: "object",
+            properties: {
+              _type: {
+                type: "string",
+                enum: ["b"],
+              },
+              b: {type: "string"},
+            },
+            additionalProperties: false,
+            required: ["_type"],
+            title: "BlockB",
+          },
+          Container: {
+            type: "object",
+            properties: {
+              list: {
+                type: "array",
+                items: {
+                  oneOf: [
+                    {
+                      $ref: "#/definitions/BlockA",
+                    },
+                    {
+                      $ref: "#/definitions/BlockB",
+                    },
+                  ],
+                  discriminator: {
+                    propertyName: "_type",
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    ]
+
+    it("should validate data", () => {
+      assertValid(schema, {
+        container: {
+          list: [
+            {_type: "a", a: "foo"},
+            {_type: "b", b: "bar"},
+          ],
+        },
+      })
+
+      assertInvalid(schema, {
+        container: {
+          list: [
+            {_type: "a", b: "foo"},
+            {_type: "b", b: "bar"},
+          ],
+        },
+      })
+    })
+  })
+
   describe("valid schemas", () => {
     it("should have oneOf", () => {
       invalidSchema(
@@ -97,7 +318,7 @@ describe("discriminator keyword", function () {
           required: ["foo"],
           oneOf: [{properties: {}}],
         },
-        /discriminator: oneOf schemas must have "properties\/foo"/
+        /discriminator: oneOf subschemas \(or referenced schemas\) must have "properties\/foo"/
       )
     })
 

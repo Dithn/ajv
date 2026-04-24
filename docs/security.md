@@ -65,6 +65,26 @@ Certain regular expressions can lead to the exponential evaluation time even wit
 
 Please assess the regular expressions you use in the schemas on their vulnerability to this attack - see [safe-regex](https://github.com/substack/safe-regex), for example.
 
+By default, Ajv uses the regex engine built into Node.js. This engine has exponential worst-case performance. This performance (and ReDoS attacks) can be mitigated by using a linear-time regex engine. Ajv supports the use of a third-party regex engine for this purpose. 
+
+To use a third-party regex engine in Ajv, set the ajv.opts.code.regExp property to that regex engine during instantiation. Here we use Google’s RE2 engine as an example. 
+
+``` 
+const Ajv = require("ajv") 
+const RE2 = require("re2") 
+const ajv = new Ajv({code: {regExp: RE2}}) 
+``` 
+
+For details about the interface of the `regexp` option, see options.md under the docs folder. 
+
+Although linear-time regex engines eliminate ReDoS vulnerabilities, changing a regex engine carries some risk, including:  
+
+ - Minor changes in regex syntax. 
+ - Minor changes in regex semantics. For example, RE2 always interprets regexes in Unicode, and disagrees with JavaScript in its definition of whitespace. To avoid regressions, develop and test your regexes in the same regex engine that you use in production. 
+ - May not support some advanced features, such as look-aheads or back-references. 
+ - May have (minor) common-case performance degradation. 
+ - Increases size of distributable (e.g. RE2 includes a non-trivial C component). 
+
 ::: warning ReDoS attack
 Some formats that [ajv-formats](https://github.com/ajv-validator/ajv-formats) package implements use [regular expressions](https://github.com/ajv-validator/ajv-formats/blob/master/src/formats.ts) that can be vulnerable to ReDoS attack.
 :::
@@ -73,7 +93,7 @@ If you use Ajv to validate data from untrusted sources **it is strongly recommen
 
 - making assessment of "format" implementations in [ajv-formats](https://github.com/ajv-validator/ajv-formats).
 - passing `"fast"` option to ajv-formats plugin (see its docs) that simplifies some of the regular expressions (although it does not guarantee that they are safe).
-- replacing format implementations provided by ajv-formats with your own implementations of "format" keyword that either use different regular expressions or another approach to format validation. Please see [addFormat](#api-addformat) method.
+- replacing format implementations provided by ajv-formats with your own implementations of "format" keyword that either use different regular expressions or another approach to format validation. Please see [addFormat](https://github.com/ajv-validator/ajv/blob/master/docs/api.md#api-addformat) method.
 - disabling format validation by ignoring "format" keyword with option `format: false`
 
 Whatever mitigation you choose, please assume all formats provided by ajv-formats as potentially unsafe and make your own assessment of their suitability for your validation scenarios.

@@ -5,7 +5,7 @@ import {_, nil} from "../dist/compile/codegen/code"
 import getAjvAllInstances from "./ajv_all_instances"
 import _Ajv from "./ajv"
 import equal from "../dist/runtime/equal"
-import assert = require("assert")
+import * as assert from "assert"
 import chai from "./chai"
 const should = chai.should()
 
@@ -282,7 +282,7 @@ describe("User-defined keywords", () => {
             it.baseId.should.equal("#")
             const ref = schema.$ref
             const validate = _ajv.getSchema(ref)
-            if (!validate) throw new _Ajv.MissingRefError(it.baseId, ref)
+            if (!validate) throw new _Ajv.MissingRefError(_ajv.opts.uriResolver, it.baseId, ref)
             return validate.schema
           },
           metaSchema: {

@@ -42,7 +42,7 @@ The simplest approach is to compile all your schemas when the application starts
 <code-group>
 <code-block title="JavaScript">
 ```javascript
-const Ajv = require("ajv").defalt
+const Ajv = require("ajv").default
 const schema_user = require("./schema_user.json")
 const ajv = new Ajv()
 const validate_user = ajv.compile(schema_user)
@@ -88,7 +88,7 @@ app.post("/user", async (cxt) => {
 </code-group>
 
 ::: warning Use single Ajv instance
-It recommended to use a single Ajv instance for the whole application, so if you use validation in more than one module, you should:
+It is recommended to use a single Ajv instance for the whole application, so if you use validation in more than one module, you should:
 
 - require Ajv in a separate module responsible for validation
 - compile all validators there
@@ -106,7 +106,7 @@ You can load all schemas and add them to Ajv instance in a single `validation` m
 <code-group>
 <code-block title="validation.js">
 ```javascript
-const Ajv = require("ajv").defalt
+const Ajv = require("ajv")
 const schema_user = require("./schema_user.json")
 const schema_document = require("./schema_document.json")
 const ajv = exports.ajv = new Ajv()
@@ -186,7 +186,7 @@ In the example above, the key passed to the `addSchema` method was used to retri
 
 ### Pre-adding all schemas vs adding on demand
 
-In the example above all schemas were added in advance. It is also possible, to add schemas as they are used - it can be helpful if there is many schemas. In this case, you need to check first whether the schema is already added by calling `getSchema` method - it would return `undefined` if not:
+In the example above all schemas were added in advance. It is also possible, to add schemas as they are used - it can be helpful if there are many schemas. In this case, you need to check first whether the schema is already added by calling `getSchema` method - it would return `undefined` if not:
 
 ```javascript
 const schema_user = require("./schema_user.json")

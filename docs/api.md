@@ -46,7 +46,7 @@ if (validate(data)) {
 }
 ```
 
-See more advanced example in [the test](../spec/types/json-schema.spec.ts).
+See more advanced example in [the test](https://github.com/ajv-validator/ajv/blob/master/spec/types/json-schema.spec.ts).
 
 <a name="jtd-serialize"></a>
 
@@ -64,7 +64,7 @@ If you use JTD with typescript, the type for the schema can be derived from the 
 import Ajv, {JTDSchemaType} from "ajv/dist/jtd"
 const ajv = new Ajv()
 
-interface MyData = {
+interface MyData {
   foo: number
   bar?: string
 }
@@ -149,7 +149,7 @@ Every time this method is called the errors are overwritten so you need to copy 
 
 If the schema is asynchronous (has `$async` keyword on the top level) this method returns a Promise. See [Asynchronous validation](./guide/async-validation.md).
 
-<a name="add-schema"></a>
+<a id="add-schema"></a>
 
 ### ajv.addSchema(schema: object | object[], key?: string): Ajv
 
@@ -245,13 +245,13 @@ Formats can be also added via `formats` option.
 
 <a name="api-addkeyword"></a>
 
-### ajv.addKeyword(definition: object): Ajv
+### ajv.addKeyword(definition: string | object): Ajv
 
 Add validation keyword to Ajv instance.
 
 Keyword should be different from all standard JSON Schema keywords and different from previously defined keywords. There is no way to redefine keywords or to remove keyword definition from the instance.
 
-Keyword must start with a letter, `_` or `$`, and may continue with letters, numbers, `_`, `$`, or `-`.
+Keyword must start with an ASCII letter, `_` or `$`, and may continue with ASCII letters, numbers, `_`, `$`, `-`, or `:`.
 It is recommended to use an application-specific prefix for keywords to avoid current and future name collisions.
 
 Example Keywords:
@@ -297,6 +297,8 @@ interface KeywordDefinition {
 }
 ```
 
+If only the property `keyword` is provided in the definition object, you can also pass the keyword name as the argument.
+
 `compile`, `macro` and `code` are mutually exclusive, only one should be used at a time. `validate` can be used separately or in addition to `compile` or `macro` to support [\$data reference](./guide/combining-schemas.md#data-reference).
 
 ::: tip Keyword is validated only for applicable data types
@@ -331,7 +333,7 @@ In case of validation failure, Ajv assigns the array of errors to `errors` prope
 
 ### Error objects
 
-Each error reported when validating against JSON Schema (also when validating against JTD schema with option `ajvErrors`) is an object with the following properties:
+Each reported error is an object with the following properties:
 
 ```typescript
 interface ErrorObject {
@@ -385,7 +387,7 @@ if (validate(data)) {
 }
 ```
 
-Also see an example in [this test](../spec/types/error-parameters.spec.ts)
+Also see an example in [this test](https://github.com/ajv-validator/ajv/blob/master/spec/types/error-parameters.spec.ts)
 
 - `maxItems`, `minItems`, `maxLength`, `minLength`, `maxProperties`, `minProperties`:
 

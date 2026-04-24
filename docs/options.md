@@ -36,7 +36,11 @@ const defaultOptions = {
   allErrors: false,
   verbose: false,
   discriminator: false, // *
-  unicodeRegExp: true // *
+  unicodeRegExp: true, // *
+  timestamp: undefined // **
+  parseDate: false // **
+  allowDate: false // **
+  int32range: true // **
   $comment: false, // *
   formats: {},
   keywords: {},
@@ -58,18 +62,23 @@ const defaultOptions = {
   ownProperties: false,
   multipleOfPrecision: undefined, // *
   messages: true, // false with JTD
+  uriResolver: undefined,
   code: {
     // NEW
     es5: false,
+    esm: false,
     lines: false,
     source: false,
     process: undefined, // (code: string) => string
     optimize: true,
+    regExp: RegExp
   },
 }
 ```
 
-<sup>\*</sup> these options are not supported with JSON Type Definition schemas
+<sup>\*</sup> only with JSON Schema
+
+<sup>\**</sup> only with JSON Type Definition
 
 ## Strict mode options <Badge text="v7" />
 
@@ -177,6 +186,49 @@ Option values:
 - `true` (default) - use unicode flag "u".
 - `false` - do not use flag "u".
 
+### timestamp <Badge text="JTD only" />
+
+Defines which Javascript types will be accepted for the [JTD timestamp type](./json-type-definition#type-form).
+
+By default Ajv will accept both Date objects and [RFC3339](https://datatracker.ietf.org/doc/rfc3339/) strings. You can specify allowed values with the option `timestamp: "date"` or `timestamp: "string"`.
+
+### parseDate <Badge text="JTD only" />
+
+Defines how date-time strings are parsed by [JTD parsers](./api.md#jtd-parse). By default Ajv parses date-time strings as string. Use `parseDate: true` to parse them as Date objects.
+
+### allowDate <Badge text="JTD only" />
+
+Defines how date-time strings are parsed and validated. By default Ajv only allows full date-time strings, as required by JTD specification. Use `allowDate: true` to allow date strings both for validation and for parsing.
+
+::: warning Option allowDate is not portable
+This option makes JTD validation and parsing more permissive and non-standard. The date strings without time part will be accepted by Ajv, but will be rejected by other JTD validators.
+:::
+
+### specialNumbers <Badge text="JTD only" />
+
+Defines how special case numbers `Infinity`, `-Infinity` and `NaN` are handled.
+
+Option values:
+
+- `"fast"` - (default): Do not treat special numbers differently to normal numbers. This is the fastest method but also can produce invalid JSON if the data contains special numbers.
+- `"null"` - Special numbers will be serialized to `null` which is the correct behavior according to the JSON spec and is also the same behavior as `JSON.stringify`.
+
+::: warning The default behavior can produce invalid JSON
+Using `specialNumbers: "fast" or undefined` can produce invalid JSON when there are any special case numbers in the data.
+:::
+
+### int32range <Badge text="JTD only" />
+
+Can be used to disable range checking for `int32` and `uint32` types.
+
+By default Ajv limits the range of these types to `[-2**31, 2**31 - 1]` for `int32` and to `[0, 2**32-1]` for `uint32` when validating and parsing.
+
+With option `int32range: false` Ajv only requires that `uint32` is non-negative, otherwise does not check the range. Parser will limit the number size to 16 digits (approx. `2**53` - safe integer range).
+
+::: warning Option int32range is not portable
+This option makes JTD validation and parsing more permissive and non-standard. The integers within a wider range will be accepted by Ajv, but will be rejected by other JTD validators.
+:::
+
 ### $comment
 
 Log or pass the value of `$comment` keyword to a function.
@@ -201,7 +253,7 @@ An array or object of schemas that will be added to the instance. In case you pa
 
 ### logger
 
-Sets the logging method. Default is the global `console` object that should have methods `log`, `warn` and `error`. See [Error logging](#error-logging).
+Sets the logging method. Default is the global `console` object that should have methods `log`, `warn` and `error`. See [Error logging](./api.md#error-logging).
 
 Option values:
 
@@ -303,6 +355,10 @@ By default `multipleOf` keyword is validated by comparing the result of division
 
 Include human-readable messages in errors. `true` by default. `false` can be passed when messages are generated outside of Ajv code (e.g. with [ajv-i18n](https://github.com/ajv-validator/ajv-i18n)).
 
+### uriResolver
+
+By default `uriResolver` is undefined and relies on the embedded uriResolver [fast-uri](https://github.com/fastify/fast-uri). Pass an object that satisfies the interface [UriResolver](https://github.com/ajv-validator/ajv/blob/master/lib/types/index.ts) to be used in replacement. One alternative is [uri-js](https://github.com/garycourt/uri-js).
+
 ### code <Badge text="v7" />
 
 Code generation options:
@@ -310,6 +366,9 @@ Code generation options:
 ```typescript
 type CodeOptions = {
   es5?: boolean // to generate es5 code - by default code is es6, with "for-of" loops, "let" and "const"
+  esm?: boolean // how functions should be exported - by default CJS is used, so the validate function(s) 
+  // file can be `required`. Set this value to true to export the validate function(s) as ES Modules, enabling 
+  // bunlers to do their job.
   lines?: boolean // add line-breaks to code - to simplify debugging of generated functions
   source?: boolean // add `source` property (see Source below) to validating function.
   process?: (code: string, schema?: SchemaEnv) => string // an optional function to process generated code
@@ -325,6 +384,12 @@ type CodeOptions = {
   // Code snippet created with `_` tagged template literal that contains all format definitions,
   // it can be the code of actual definitions or `require` call:
   // _`require("./my-formats")`
+  regExp: RegExpEngine
+  // Pass non-standard RegExp engine to mitigate ReDoS, e.g. node-re2.
+  // During validation of a schema, code.regExp will be 
+  // used to match strings against regular expressions.
+  // The supplied function must support the interface:
+  // regExp(regex, unicodeFlag).test(string) => boolean
 }
 
 type Source = {
